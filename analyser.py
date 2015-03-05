@@ -2,7 +2,78 @@
 __author__ = 'crunch'
 import json
 import sys
+import time
 from timestamp import TimeStamp
+
+
+def write_stats(stats):
+    # stats = {
+    #     'websites': {},
+    #     'from_cache': 0,
+    #     'total': 0,
+    #     'response_only': 0,
+    #     'request_only': 0,
+    #     'no_data': 0,
+    #     'wtf': {}
+    # }
+    stats_file = open('stats.log', 'a')
+    stats_file.write('='*100 + '\n')
+    stats_file.write(time.strftime("%c") + '\n')
+    stats_file.write('='*100 + '\n')
+    stats_file.write(str(stats['websites']) + '\n')
+    stats_file.write('# of pairs (incl. empty): {0}\n'.format(stats['total']))
+    stats_file.write('# of empty pairs: {0}\n'.format(stats['no_data']))
+    stats_file.write('# of pairs with request only: {0}\n'.format(stats['request_only']))
+    stats_file.write('# of pairs with response only: {0}\n'.format(stats['response_only']))
+    stats_file.write('# of responses from disk cache: {0}\n'.format(stats['from_cache']))
+    stats_file.write('Response from cache: {0:.1f}\n'.format(stats['from_cache'] * 100 / float(stats['total'])))
+    stats_file.close()
+
+
+def preprocess_json(data):
+    """Filter out cache responses, build statistics"""
+    stats = {
+        'websites': {},
+        'from_cache': 0,
+        'total': 0,
+        'response_only': 0,
+        'request_only': 0,
+        'no_data': 0,
+        # 'first_request_time': float('inf'),
+        # 'first_response_time': float('inf'),
+        # 'last_request_time': 0,
+        # 'last_response_time': 0,
+        'wtf': {}
+    }
+    filtered_data = {}
+    for i, website in enumerate(data):
+        stats['websites'][website] = 0
+        for j, pair in enumerate(data[website]['pairs']):
+            if pair is None:
+                stats['no_data'] += 1
+                try:
+                    stats['wtf'][website].append(j)
+                except KeyError:
+                    stats['wtf'][website] = [j]
+            elif pair['response'] is None and pair['request'] is None:
+                stats['no_data'] += 1
+            elif pair['response'] is None:
+                stats['request_only'] += 1
+            elif pair['request'] is None:
+                stats['response_only'] += 1
+            else:
+                if pair['response']['fromCache']:
+                    stats['from_cache'] += 1
+                else:
+                    try:
+                        filtered_data[website].append(pair)
+                    except KeyError:
+                        filtered_data[website] = [pair]
+            stats['websites'][website] += 1
+            stats['total'] += 1
+    write_stats(stats)
+    return filtered_data
+
 
 if len(sys.argv) == 1:
     filename = 'data.json'
@@ -11,53 +82,12 @@ else:
 
 f = open(filename)
 data = json.load(f)
-websites = {}
-from_cache = 0
-total = 0
-only_response = 0
-only_request = 0
-both = 0
-first_time_request = 1000000000000000000
-first_time_response = 100000000000000000
-last_time_response = 0
-last_time_request = 0
-wtf = {}
+preprocessed = preprocess_json(data)
+new_filename = filename[:-5] + '_preprocessed.json'
+f1 = open(new_filename, 'w')
+json.dump(preprocessed, f1)
 
-for i, website in enumerate(data):
-    websites[website] = 0
-    for j, pair in enumerate(data[website]['pairs']):
-        if pair is None:
-            wtf[website].append(j)
-            continue
-        if pair['response'] is not None and pair['request'] is None:
-            only_response += 1
-        if pair['request'] is not None and pair['response'] is None:
-            only_request += 1
-        if pair['request'] is None and pair['response'] is None:
-            both += 1
-        if pair['request'] is not None:
-            if pair['request']['timeStamp'] > last_time_request:
-                last_time_request = pair['request']['timeStamp']
-            if pair['request']['timeStamp'] < first_time_request:
-                first_time_request = pair['request']['timeStamp']
-        if pair['response'] is not None:
-            if pair['response']['fromCache']:
-                from_cache += 1
-            if pair['response']['timeStamp'] > last_time_response:
-                last_time_response = pair['response']['timeStamp']
-            if pair['response']['timeStamp'] < first_time_response:
-                first_time_response = pair['response']['timeStamp']
-        # print pair['request']['timeStamp'], pair['response']['timeStamp']
-        websites[website] += 1
-        total += 1
-print 'wtf', wtf
-print websites
-print 'first_time_request', TimeStamp(first_time_response/1000.0).get_datetime()
-print 'first_time_response', TimeStamp(first_time_response/1000.0).get_datetime()
-print 'last_time_request', TimeStamp(last_time_request/1000.0).get_datetime()
-print 'last_time_response', TimeStamp(last_time_response/1000.0).get_datetime()
-print 'only response', only_response
-print 'only request', only_request
-print 'from cache', from_cache
-print 'total', total
-print 'percent from cache', from_cache / float(total)
+# print 'first_time_request', TimeStamp(first_time_response / 1000.0).get_datetime()
+# print 'first_time_response', TimeStamp(first_time_response / 1000.0).get_datetime()
+# print 'last_time_request', TimeStamp(last_time_request / 1000.0).get_datetime()
+# print 'last_time_response', TimeStamp(last_time_response / 1000.0).get_datetime()
