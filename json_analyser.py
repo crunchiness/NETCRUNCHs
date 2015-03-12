@@ -26,7 +26,7 @@ def write_stats(stats):
     stats_file.write('# of pairs with request only: {0}\n'.format(stats['request_only']))
     stats_file.write('# of pairs with response only: {0}\n'.format(stats['response_only']))
     stats_file.write('# of responses from disk cache: {0}\n'.format(stats['from_cache']))
-    stats_file.write('Response from cache: {0:.1f}\n'.format(stats['from_cache'] * 100 / float(stats['total'])))
+    stats_file.write('Response from cache: {0:.1f}%\n'.format(stats['from_cache'] * 100 / float(stats['total'])))
     stats_file.close()
 
 
@@ -75,19 +75,43 @@ def preprocess_json(data):
     return filtered_data
 
 
-if len(sys.argv) == 1:
-    filename = 'data.json'
-else:
-    filename = sys.argv[1]
+def get_avg_delays(data):
+    delays = {}
+    for website in data:
+        diff_sum = 0
+        num_pairs = 0
+        for pair in data[website]:
+            diff_sum += pair['response']['timeStamp'] - pair['request']['timeStamp']
+            num_pairs += 1
+        avg_delay = diff_sum / (1000.0 * num_pairs)
+        delays[website] = avg_delay
+    return delays
 
-f = open(filename)
-data = json.load(f)
-preprocessed = preprocess_json(data)
-new_filename = filename[:-5] + '_preprocessed.json'
-f1 = open(new_filename, 'w')
-json.dump(preprocessed, f1)
 
-# print 'first_time_request', TimeStamp(first_time_response / 1000.0).get_datetime()
-# print 'first_time_response', TimeStamp(first_time_response / 1000.0).get_datetime()
-# print 'last_time_request', TimeStamp(last_time_request / 1000.0).get_datetime()
-# print 'last_time_response', TimeStamp(last_time_response / 1000.0).get_datetime()
+def get_json_time_limits(data):
+    first_request_time = float('inf')
+    last_response_time = 0
+    for website in data:
+        for pair in data[website]:
+            if pair['request']['timeStamp'] < first_request_time:
+                first_request_time = pair['request']['timeStamp']
+            if pair['response']['timeStamp'] > last_response_time:
+                last_response_time = pair['response']['timeStamp']
+    return TimeStamp(first_request_time / 1000.0), TimeStamp(last_response_time / 1000.0)
+
+if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        filename = 'data.json'
+    else:
+        filename = sys.argv[1]
+
+    f = open(filename)
+    data = json.load(f)
+    preprocessed = preprocess_json(data)
+    print get_avg_delays(preprocessed)
+    a, b = get_json_time_limits(preprocessed)
+    print 'from', a.get_datetime()
+    print 'to', b.get_datetime()
+    new_filename = filename[:-5] + '_preprocessed.json'
+    f1 = open(new_filename, 'w')
+    json.dump(preprocessed, f1)
