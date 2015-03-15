@@ -1,15 +1,17 @@
 import csv
+
 stuff = {}
-with open('one-maximize.csv', 'rb') as csvfile:
-    spamreader = csv.reader(csvfile)
-    for row in spamreader:
+
+with open('one-res-maxim.txt', 'rb') as csv_file:
+    csv_reader = csv.reader(csv_file)
+    for row in csv_reader:
         try:
             stuff[row[1]][row[0]] = row[2]
         except KeyError:
             stuff[row[1]] = {row[0]: row[2]}
 
-with open('eggs.csv', 'wb') as csvfile:
-    spamwriter = csv.writer(csvfile)
-    spamwriter.writerow(['Delay', 'Tumblr', 'Facebook'])
+with open('one-res-max-compact.csv', 'wb') as csv_file:
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(['Delay', 'Tumblr', 'Facebook'])
     for key in stuff:
-        spamwriter.writerow([key, stuff[key]['tumblr.com'], stuff[key]['facebook.com']])
+        csv_writer.writerow([key, stuff[key]['tumblr.com'], stuff[key]['facebook.com']])
