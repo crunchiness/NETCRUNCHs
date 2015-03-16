@@ -17,7 +17,7 @@ json_data = {
         }
     ],
     'tabChanges': {
-        20: [
+        '20': [
             {
                 'timeStamp': 1,
                 'website': 'agurkai'
@@ -27,13 +27,13 @@ json_data = {
                 'website': 'burokai'
             }
         ],
-        63: [
+        '63': [
             {
                 'timeStamp': 6,
                 'website': 'morkos'
             }
         ],
-        30: [
+        '30': [
             {
                 'timeStamp': 25,
                 'website': 'pomidorai'

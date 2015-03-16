@@ -42,7 +42,7 @@ def get_pcap_time_limits(packets):
 
 def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, csv=False):
     this = []
-    field_names = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt', 'pad']
+    field_names = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt', 'pad', 'website', 'source']
     if csv:
         csv_file = open('names.csv', 'w')
         writer = csv.DictWriter(csv_file, fieldnames=field_names)
@@ -54,8 +54,10 @@ def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, csv=False):
             ip_packet = IP(binascii.unhexlify(eth_frame.payload))
             pkt_obj = parse(ip_packet)
             pkt_obj['timestamp'] = pkt_ts
-            if not (pkt_obj['src'] == '127.0.0.1' or pkt_obj['src'] == '127.0.1.1' or \
-               pkt_obj['dst'] == '127.0.0.1' or pkt_obj['dst'] == '127.0.1.1'):
+            pkt_obj['source'] = set([])
+            pkt_obj['website'] = set([])
+            if not (pkt_obj['src'] == '127.0.0.1' or pkt_obj['src'] == '127.0.1.1' or
+                    pkt_obj['dst'] == '127.0.0.1' or pkt_obj['dst'] == '127.0.1.1'):
                 this.append(pkt_obj)
                 if csv:
                     writer.writerow(pkt_obj)

@@ -3,10 +3,7 @@ __author__ = 'crunch'
 import json
 import csv
 import argparse
-import binascii
 from pcapfile import savefile
-from pcapfile.protocols.network.ip import IP
-from pcapfile.protocols.linklayer.ethernet import Ethernet
 from json_analyser import get_json_time_limits, preprocess_json, preprocess_time_tab_data
 from pcap_analyser import get_pcap_time_limits, parse_pcap
 from timestamp import TimeStamp
@@ -48,17 +45,18 @@ def req_pkt_stats(json_data, pcap_data, time_from, time_to):
                 if not req_timestamp <= pkt_timestamp < req_timestamp + tolerance:
                     continue
                 if pkt['dst'] == ip:
-                    pcap_data[j]['website'] = [website]
+                    pcap_data[j]['source'].add('REQ')
+                    pcap_data[j]['website'].add(website)
                     statistics[website][i] += 1
-    summarized_stats = {}
-    for website in statistics:
-        summarized_stats[website] = {}
-        for key in statistics[website]:
-            try:
-                summarized_stats[website][statistics[website][key]] += 1
-            except KeyError:
-                summarized_stats[website][statistics[website][key]] = 1
-    print summarized_stats
+    # summarized_stats = {}
+    # for website in statistics:
+    #     summarized_stats[website] = {}
+    #     for key in statistics[website]:
+    #         try:
+    #             summarized_stats[website][statistics[website][key]] += 1
+    #         except KeyError:
+    #             summarized_stats[website][statistics[website][key]] = 1
+    # print summarized_stats
     return pcap_data
 
 
@@ -83,48 +81,61 @@ def res_pkt_stats(json_data, pcap_data, time_from, time_to):
                 if not res_timestamp - tolerance < pkt_timestamp <= res_timestamp:
                     continue
                 if pkt['src'] == ip:
-                    try:
-                        pcap_data[j]['website'].append(website)
-                    except KeyError:
-                        pcap_data[j]['website'] = [website]
+                    pcap_data[j]['source'].add('RES')
+                    pcap_data[j]['website'].add(website)
                     statistics[website][i] += 1
-    summarized_stats = {}
-    for website in statistics:
-        summarized_stats[website] = {}
-        for key in statistics[website]:
-            try:
-                summarized_stats[website][statistics[website][key]] += 1
-            except KeyError:
-                summarized_stats[website][statistics[website][key]] = 1
-    print summarized_stats
+    # summarized_stats = {}
+    # for website in statistics:
+    #     summarized_stats[website] = {}
+    #     for key in statistics[website]:
+    #         try:
+    #             summarized_stats[website][statistics[website][key]] += 1
+    #         except KeyError:
+    #             summarized_stats[website][statistics[website][key]] = 1
+    # print summarized_stats
     return pcap_data
 
 
 def assign_by_ip(pcap_data):
     for i, pkt in enumerate(pcap_data):
-        if 'website' in pkt:
+        if len(pkt['website']) > 0:
             continue
         if pkt['src'] in ips:
-            website = ips[pkt['src']]
+            pcap_data[i]['source'].add('IP')
+            pcap_data[i]['website'] = ips[pkt['src']]
         elif pkt['dst'] in ips:
-            website = ips[pkt['dst']]
-        else:
-            website = None
-        pcap_data[i]['website'] = website
+            pcap_data[i]['source'].add('IP')
+            pcap_data[i]['website'] = ips[pkt['dst']]
     return pcap_data
 
 
 def assign_by_time_tab(pcap_data, timing_data):
-    print timing_data
     for i, pkt in enumerate(pcap_data):
-        if 'website' in pkt:
-            continue
-        else:
-            for j in range(1, len(timing_data)):
-                if timing_data[j-1]['timeStamp'] / 1000. < pkt['timestamp'] < timing_data[j]['timeStamp'] / 1000.:
-                    pcap_data[i]['website'] = timing_data[j-1]['website']
+        if len(pkt['website']) == 0 or len(pkt['website']) > 1:
+            for j in range(1, len(timing_data) + 1):
+                time_from = timing_data[j-1]['timeStamp'] / 1000.
+                try:
+                    time_to = timing_data[j]['timeStamp'] / 1000.
+                except IndexError:
+                    time_to = float('inf')
+                if time_from < pkt['timestamp'] < time_to:
+                    if len(pkt['website']) == 0:
+                        pcap_data[i]['source'].add('TIME')
+                        pcap_data[i]['website'] = set([timing_data[j-1]['website']])
+                    elif timing_data[j-1]['website'] in pkt['website']:
+                        pcap_data[i]['source'].add('TIME')
+                        pcap_data[i]['website'] = set([timing_data[j-1]['website']])
                     break
-            pcap_data[i]['website'] = timing_data[j]['website']
+    return pcap_data
+
+
+def stringify(pcap_data):
+    for i, pkt in enumerate(pcap_data):
+        if len(pkt['website']) == 0:
+            pcap_data[i]['website'] = 'Other'
+        else:
+            pcap_data[i]['website'] = ';'.join(sorted(list(pkt['website'])))
+        pcap_data[i]['source'] = ';'.join(sorted(list(pkt['source'])))
     return pcap_data
 
 
@@ -149,11 +160,12 @@ def main(json_name, pcap_name, preprocessed):
     parsed_pcap = parse_pcap(pcap_data.packets, timestamp_abs_from, timestamp_abs_to)
     parsed_pcap = req_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
     parsed_pcap = res_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
-    parsed_pcap = assign_by_ip(parsed_pcap)
-    parsed_pcap = assign_by_time_tab(parsed_pcap, timing_data)
+    # parsed_pcap = assign_by_ip(parsed_pcap)
+    # parsed_pcap = assign_by_time_tab(parsed_pcap, timing_data)
+    parsed_pcap = stringify(parsed_pcap)
 
-    csv_file = open('req-res.csv', 'w')
-    field_names = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt', 'pad', 'website']
+    csv_file = open('no-ips.csv', 'w')
+    field_names = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt', 'pad', 'website', 'source']
     writer = csv.DictWriter(csv_file, fieldnames=field_names)
     writer.writeheader()
     for pkt_obj in parsed_pcap:

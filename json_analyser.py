@@ -40,16 +40,11 @@ def preprocess_json(data):
         'response_only': 0,
         'request_only': 0,
         'no_data': 0,
-        # 'first_request_time': float('inf'),
-        # 'first_response_time': float('inf'),
-        # 'last_request_time': 0,
-        # 'last_response_time': 0,
         'wtf': {}
     }
     filtered_data = {}
     for i, website in enumerate(pairs):
         stats['websites'][website] = 0
-        print website
         for j, pair in enumerate(pairs[website]['pairs']):
             if pair is None:
                 stats['no_data'] += 1
@@ -77,7 +72,6 @@ def preprocess_json(data):
     return filtered_data
 
 
-#TODO fix, write unit test
 def preprocess_time_tab_data(json_data):
     active_tab = json_data['activeTab']
     tab_changes = json_data['tabChanges']
@@ -88,7 +82,7 @@ def preprocess_time_tab_data(json_data):
             time_stamp_to = active_tab[i]['timeStamp']
         except IndexError:
             time_stamp_to = float('inf')
-        tab_id = active_tab[i-1]['id']
+        tab_id = str(active_tab[i-1]['id'])
         website = None
         if tab_id not in tab_changes:
             continue
