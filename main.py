@@ -7,7 +7,7 @@ import binascii
 from pcapfile import savefile
 from pcapfile.protocols.network.ip import IP
 from pcapfile.protocols.linklayer.ethernet import Ethernet
-from json_analyser import get_json_time_limits, preprocess_json
+from json_analyser import get_json_time_limits, preprocess_json, preprocess_time_tab_data
 from pcap_analyser import get_pcap_time_limits, parse_pcap
 from timestamp import TimeStamp
 
@@ -114,9 +114,18 @@ def assign_by_ip(pcap_data):
     return pcap_data
 
 
-def assign_by_time_tab(pcap_data, json_data):
-
-    pass
+def assign_by_time_tab(pcap_data, timing_data):
+    print timing_data
+    for i, pkt in enumerate(pcap_data):
+        if 'website' in pkt:
+            continue
+        else:
+            for j in range(1, len(timing_data)):
+                if timing_data[j-1]['timeStamp'] / 1000. < pkt['timestamp'] < timing_data[j]['timeStamp'] / 1000.:
+                    pcap_data[i]['website'] = timing_data[j-1]['website']
+                    break
+            pcap_data[i]['website'] = timing_data[j]['website']
+    return pcap_data
 
 
 def main(json_name, pcap_name, preprocessed):
@@ -125,20 +134,24 @@ def main(json_name, pcap_name, preprocessed):
     pcap_file = open(pcap_name)
     if preprocessed:
         json_data = json.load(json_file)
+        pair_data = json_data['pairs']
+        timing_data = json_data['timing']
     else:
         raw_json_data = json.load(json_file)
-        json_data = preprocess_json(raw_json_data)
+        pair_data = preprocess_json(raw_json_data)
+        timing_data = preprocess_time_tab_data(raw_json_data)
     pcap_data = savefile.load_savefile(pcap_file, verbose=True)
-    timestamp_json_from, timestamp_json_to = get_json_time_limits(json_data)
+    timestamp_json_from, timestamp_json_to = get_json_time_limits(pair_data)
     timestamp_pcap_from, timestamp_pcap_to = get_pcap_time_limits(pcap_data.packets)
     timestamp_abs_from, timestamp_abs_to = get_abs_time_limits(timestamp_json_from, timestamp_json_to,
                                                                TimeStamp(timestamp_pcap_from),
                                                                TimeStamp(timestamp_pcap_to))
-    parsed_pcap = parse_pcap(pcap_data.packets)
+    parsed_pcap = parse_pcap(pcap_data.packets, timestamp_abs_from, timestamp_abs_to)
+    parsed_pcap = req_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
+    parsed_pcap = res_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
+    parsed_pcap = assign_by_ip(parsed_pcap)
+    parsed_pcap = assign_by_time_tab(parsed_pcap, timing_data)
 
-    parsed_pcap = req_pkt_stats(json_data['pairs'], parsed_pcap, timestamp_abs_from, timestamp_abs_to)
-    parsed_pcap = res_pkt_stats(json_data['pairs'], parsed_pcap, timestamp_abs_from, timestamp_abs_to)
-    # parsed_pcap = assign_by_ip(parsed_pcap['pairs'])
     csv_file = open('req-res.csv', 'w')
     field_names = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt', 'pad', 'website']
     writer = csv.DictWriter(csv_file, fieldnames=field_names)

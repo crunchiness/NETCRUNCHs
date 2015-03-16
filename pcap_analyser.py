@@ -40,7 +40,7 @@ def get_pcap_time_limits(packets):
     return timestamp_pcap_from, timestamp_pcap_to
 
 
-def parse_pcap(packets, csv=False):
+def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, csv=False):
     this = []
     field_names = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt', 'pad']
     if csv:
@@ -49,7 +49,7 @@ def parse_pcap(packets, csv=False):
         writer.writeheader()
     for pkt in packets:
         pkt_ts = pkt.timestamp + pkt.timestamp_ms / 1000000.
-        if 1426436538.484 < pkt_ts < 1426437584.962:
+        if timestamp_abs_from.get_seconds() < pkt_ts < timestamp_abs_to.get_seconds():
             eth_frame = Ethernet(pkt.raw())
             ip_packet = IP(binascii.unhexlify(eth_frame.payload))
             pkt_obj = parse(ip_packet)

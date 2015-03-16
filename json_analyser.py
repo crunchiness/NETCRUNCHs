@@ -49,6 +49,7 @@ def preprocess_json(data):
     filtered_data = {}
     for i, website in enumerate(pairs):
         stats['websites'][website] = 0
+        print website
         for j, pair in enumerate(pairs[website]['pairs']):
             if pair is None:
                 stats['no_data'] += 1
@@ -73,13 +74,10 @@ def preprocess_json(data):
             stats['websites'][website] += 1
             stats['total'] += 1
     write_stats(stats)
-    return {
-        'pairs': filtered_data,
-        'activeTab': data['activeTab'],
-        'tabChanges': data['tabChanges']
-    }
+    return filtered_data
 
 
+#TODO fix, write unit test
 def preprocess_time_tab_data(json_data):
     active_tab = json_data['activeTab']
     tab_changes = json_data['tabChanges']
@@ -87,8 +85,10 @@ def preprocess_time_tab_data(json_data):
     for i in range(1, len(active_tab)):
         time_stamp_from = active_tab[i-1]['timeStamp']
         time_stamp_to = active_tab[i]['timeStamp']
-        tab_id = active_tab[i-1]['tabId']
+        tab_id = active_tab[i-1]['id']
         website = None
+        if tab_id not in tab_changes:
+            continue
         for change in tab_changes[tab_id]:
             if change['timeStamp'] <= time_stamp_from:
                 website = change['website']
@@ -141,11 +141,12 @@ if __name__ == '__main__':
 
     f = open(filename)
     data = json.load(f)
-    preprocessed = preprocess_json(data)
-    print get_avg_delays(preprocessed)
-    a, b = get_json_time_limits(preprocessed)
-    print 'from', a.get_datetime()
-    print 'to', b.get_datetime()
+    filtered_pairs = preprocess_json(data)
+    prepared_time = preprocess_time_tab_data(data)
+    a, b = get_json_time_limits(filtered_pairs)
     new_filename = filename[:-5] + '_preprocessed.json'
     f1 = open(new_filename, 'w')
-    json.dump(preprocessed, f1)
+    json.dump({
+        'pairs': filtered_pairs,
+        'timing': prepared_time
+    }, f1)
