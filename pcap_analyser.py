@@ -54,9 +54,11 @@ def parse_pcap(packets, csv=False):
             ip_packet = IP(binascii.unhexlify(eth_frame.payload))
             pkt_obj = parse(ip_packet)
             pkt_obj['timestamp'] = pkt_ts
-            this.append(pkt_obj)
-            if csv:
-                writer.writerow(pkt_obj)
+            if not (pkt_obj['src'] == '127.0.0.1' or pkt_obj['src'] == '127.0.1.1' or \
+               pkt_obj['dst'] == '127.0.0.1' or pkt_obj['dst'] == '127.0.1.1'):
+                this.append(pkt_obj)
+                if csv:
+                    writer.writerow(pkt_obj)
     if csv:
         csv_file.close()
     return this

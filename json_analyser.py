@@ -32,6 +32,7 @@ def write_stats(stats):
 
 def preprocess_json(data):
     """Filter out cache responses, build statistics"""
+    pairs = data['pairs']
     stats = {
         'websites': {},
         'from_cache': 0,
@@ -46,9 +47,9 @@ def preprocess_json(data):
         'wtf': {}
     }
     filtered_data = {}
-    for i, website in enumerate(data):
+    for i, website in enumerate(pairs):
         stats['websites'][website] = 0
-        for j, pair in enumerate(data[website]['pairs']):
+        for j, pair in enumerate(pairs[website]['pairs']):
             if pair is None:
                 stats['no_data'] += 1
                 try:
@@ -72,7 +73,40 @@ def preprocess_json(data):
             stats['websites'][website] += 1
             stats['total'] += 1
     write_stats(stats)
-    return filtered_data
+    return {
+        'pairs': filtered_data,
+        'activeTab': data['activeTab'],
+        'tabChanges': data['tabChanges']
+    }
+
+
+def preprocess_time_tab_data(json_data):
+    active_tab = json_data['activeTab']
+    tab_changes = json_data['tabChanges']
+    opened_website = []
+    for i in range(1, len(active_tab)):
+        time_stamp_from = active_tab[i-1]['timeStamp']
+        time_stamp_to = active_tab[i]['timeStamp']
+        tab_id = active_tab[i-1]['tabId']
+        website = None
+        for change in tab_changes[tab_id]:
+            if change['timeStamp'] <= time_stamp_from:
+                website = change['website']
+            elif change['timeStamp'] < time_stamp_to:
+                if change['website'] != website:
+                    opened_website.append({
+                        'timeStamp': time_stamp_from,
+                        'website': website
+                    })
+                    time_stamp_from = change['timeStamp']
+                    website = change['website']
+            else:
+                opened_website.append({
+                    'timeStamp': time_stamp_from,
+                    'website': website
+                })
+                break
+    return opened_website
 
 
 def get_avg_delays(data):
