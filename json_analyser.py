@@ -82,9 +82,12 @@ def preprocess_time_tab_data(json_data):
     active_tab = json_data['activeTab']
     tab_changes = json_data['tabChanges']
     opened_website = []
-    for i in range(1, len(active_tab)):
+    for i in range(1, len(active_tab)+1):
         time_stamp_from = active_tab[i-1]['timeStamp']
-        time_stamp_to = active_tab[i]['timeStamp']
+        try:
+            time_stamp_to = active_tab[i]['timeStamp']
+        except IndexError:
+            time_stamp_to = float('inf')
         tab_id = active_tab[i-1]['id']
         website = None
         if tab_id not in tab_changes:
@@ -106,6 +109,11 @@ def preprocess_time_tab_data(json_data):
                     'website': website
                 })
                 break
+        else:
+            opened_website.append({
+                'timeStamp': time_stamp_from,
+                'website': website
+            })
     return opened_website
 
 
