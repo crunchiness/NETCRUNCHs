@@ -54,15 +54,6 @@ def req_pkt_stats(json_data, pcap_data, time_from, time_to):
                     pcap_data[j]['source'].add('REQ')
                     pcap_data[j]['website'].add(website)
                     statistics[website][i] += 1
-    # summarized_stats = {}
-    # for website in statistics:
-    # summarized_stats[website] = {}
-    # for key in statistics[website]:
-    # try:
-    #             summarized_stats[website][statistics[website][key]] += 1
-    #         except KeyError:
-    #             summarized_stats[website][statistics[website][key]] = 1
-    # print summarized_stats
     return pcap_data
 
 
@@ -90,15 +81,6 @@ def res_pkt_stats(json_data, pcap_data, time_from, time_to):
                     pcap_data[j]['source'].add('RES')
                     pcap_data[j]['website'].add(website)
                     statistics[website][i] += 1
-    # summarized_stats = {}
-    # for website in statistics:
-    # summarized_stats[website] = {}
-    # for key in statistics[website]:
-    # try:
-    #             summarized_stats[website][statistics[website][key]] += 1
-    #         except KeyError:
-    #             summarized_stats[website][statistics[website][key]] = 1
-    # print summarized_stats
     return pcap_data
 
 
