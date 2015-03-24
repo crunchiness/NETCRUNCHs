@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
-__author__ = 'crunch'
+#!/usr/bin/env python
+__author__ = 'Ingvaras Merkys'
+
 import json
 import csv
 import argparse
@@ -8,6 +9,11 @@ from json_analyser import get_json_time_limits, preprocess_json, preprocess_time
 from pcap_analyser import get_pcap_time_limits, parse_pcap
 from timestamp import TimeStamp
 
+# field names of output file
+FIELD_NAMES = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt',
+               'pad', 'website', 'source']
+
+# IP dictionary
 ips = {}
 
 
@@ -50,9 +56,9 @@ def req_pkt_stats(json_data, pcap_data, time_from, time_to):
                     statistics[website][i] += 1
     # summarized_stats = {}
     # for website in statistics:
-    #     summarized_stats[website] = {}
-    #     for key in statistics[website]:
-    #         try:
+    # summarized_stats[website] = {}
+    # for key in statistics[website]:
+    # try:
     #             summarized_stats[website][statistics[website][key]] += 1
     #         except KeyError:
     #             summarized_stats[website][statistics[website][key]] = 1
@@ -86,9 +92,9 @@ def res_pkt_stats(json_data, pcap_data, time_from, time_to):
                     statistics[website][i] += 1
     # summarized_stats = {}
     # for website in statistics:
-    #     summarized_stats[website] = {}
-    #     for key in statistics[website]:
-    #         try:
+    # summarized_stats[website] = {}
+    # for key in statistics[website]:
+    # try:
     #             summarized_stats[website][statistics[website][key]] += 1
     #         except KeyError:
     #             summarized_stats[website][statistics[website][key]] = 1
@@ -113,7 +119,7 @@ def assign_by_time_tab(pcap_data, timing_data):
     for i, pkt in enumerate(pcap_data):
         if len(pkt['website']) == 0 or len(pkt['website']) > 1:
             for j in range(1, len(timing_data) + 1):
-                time_from = timing_data[j-1]['timeStamp'] / 1000.
+                time_from = timing_data[j - 1]['timeStamp'] / 1000.
                 try:
                     time_to = timing_data[j]['timeStamp'] / 1000.
                 except IndexError:
@@ -121,10 +127,10 @@ def assign_by_time_tab(pcap_data, timing_data):
                 if time_from < pkt['timestamp'] < time_to:
                     if len(pkt['website']) == 0:
                         pcap_data[i]['source'].add('TIME')
-                        pcap_data[i]['website'] = set([timing_data[j-1]['website']])
-                    elif timing_data[j-1]['website'] in pkt['website']:
+                        pcap_data[i]['website'] = set([timing_data[j - 1]['website']])
+                    elif timing_data[j - 1]['website'] in pkt['website']:
                         pcap_data[i]['source'].add('TIME')
-                        pcap_data[i]['website'] = set([timing_data[j-1]['website']])
+                        pcap_data[i]['website'] = set([timing_data[j - 1]['website']])
                     break
     return pcap_data
 
@@ -139,7 +145,7 @@ def stringify(pcap_data):
     return pcap_data
 
 
-def main(json_name, pcap_name, preprocessed):
+def main(json_name, pcap_name, preprocessed, output_file):
     """Main method"""
     json_file = open(json_name)
     pcap_file = open(pcap_name)
@@ -158,33 +164,37 @@ def main(json_name, pcap_name, preprocessed):
                                                                TimeStamp(timestamp_pcap_from),
                                                                TimeStamp(timestamp_pcap_to))
     parsed_pcap = parse_pcap(pcap_data.packets, timestamp_abs_from, timestamp_abs_to)
+    # packet matching using request data
     parsed_pcap = req_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
+    # packet matching using response data
     parsed_pcap = res_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
-    # parsed_pcap = assign_by_ip(parsed_pcap)
-    # parsed_pcap = assign_by_time_tab(parsed_pcap, timing_data)
+    # packet matching by ip
+    parsed_pcap = assign_by_ip(parsed_pcap)
+    # packet matching by active tab time data
+    parsed_pcap = assign_by_time_tab(parsed_pcap, timing_data)
+
     parsed_pcap = stringify(parsed_pcap)
 
-    csv_file = open('no-ips.csv', 'w')
-    field_names = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt', 'pad', 'website', 'source']
-    writer = csv.DictWriter(csv_file, fieldnames=field_names)
+    # write output to CSV file
+    csv_file = open(output_file, 'w')
+    writer = csv.DictWriter(csv_file, fieldnames=FIELD_NAMES)
     writer.writeheader()
     for pkt_obj in parsed_pcap:
         writer.writerow(pkt_obj)
     csv_file.close()
-    # for i in xrange(100):
-    #     print i
-    # res_pkt_stats(json_data, pcap_data.packets, timestamp_abs_from, timestamp_abs_to, 10/1000.)
-    print timestamp_abs_from.get_ms(), timestamp_abs_to.get_ms()
-    print timestamp_abs_from.get_datetime(), timestamp_abs_to.get_datetime()
+    print 'ALL DONE'
 
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Description.')
+    parser = argparse.ArgumentParser(description='NETCRUNCHs main module.')
     parser.add_argument('-p', '--preprocessed', help='use preprocessed JSON',
                         action='store_true')
-    parser.add_argument('json_name', nargs='?', type=str, help='input JSON file')
-    parser.add_argument('pcap_name', nargs='?', type=str, help='input PCAP file', default='dump.pcap')
+    parser.add_argument('json_name', nargs='?', type=str,
+                        help='input JSON file (\'data.json\' or \'data_preprocessed.json\' by default)')
+    parser.add_argument('pcap_name', nargs='?', type=str, help='input PCAP file (default \'dump.pcap\')',
+                        default='dump.pcap')
+    parser.add_argument('output', nargs='?', type=str, help='output file (default \'out.csv\')', default='out.csv')
 
     args = parser.parse_args()
 
@@ -194,4 +204,4 @@ if __name__ == '__main__':
         else:
             args.json_name = 'data.json'
 
-    main(args.json_name, args.pcap_name, args.preprocessed)
+    main(args.json_name, args.pcap_name, args.preprocessed, args.output)

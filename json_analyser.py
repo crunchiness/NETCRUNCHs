@@ -148,6 +148,7 @@ if __name__ == '__main__':
     file_name = args.json_name
     input_file = open(file_name)
     data = json.load(input_file)
+    input_file.close()
 
     # filter data
     filtered_pairs = preprocess_json(data)
@@ -162,4 +163,5 @@ if __name__ == '__main__':
         'pairs': filtered_pairs,
         'timing': prepared_time
     }, output_file)
+
     output_file.close()
