@@ -99,7 +99,7 @@ def assign_by_ip(pcap_data):
 
 def assign_by_time_tab(pcap_data, timing_data):
     for i, pkt in enumerate(pcap_data):
-        if len(pkt['website']) == 0 or len(pkt['website']) > 1:
+        if not (('RES' in pcap_data[i]['source']) or ('REQ' in pcap_data[i]['source'])):
             for j in range(1, len(timing_data) + 1):
                 time_from = timing_data[j - 1]['timeStamp'] / 1000.
                 try:
@@ -107,12 +107,12 @@ def assign_by_time_tab(pcap_data, timing_data):
                 except IndexError:
                     time_to = float('inf')
                 if time_from < pkt['timestamp'] < time_to:
-                    if len(pkt['website']) == 0:
+                    if timing_data[j - 1]['website'] in pkt['website']:
                         pcap_data[i]['source'].add('TIME')
                         pcap_data[i]['website'] = set([timing_data[j - 1]['website']])
-                    elif timing_data[j - 1]['website'] in pkt['website']:
+                    else:
                         pcap_data[i]['source'].add('TIME')
-                        pcap_data[i]['website'] = set([timing_data[j - 1]['website']])
+                        pcap_data[i]['website'].add(timing_data[j - 1]['website'])
                     break
     return pcap_data
 
