@@ -51,6 +51,8 @@ def get_pcap_time_limits(packets):
 def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, csv_name='dump.csv'):
     """Produces python list from pcap file"""
     pcap_list = []
+    writer = None
+    csv_file = None
     if write_csv:
         csv_file = open(csv_name, 'w')
         writer = csv.DictWriter(csv_file, fieldnames=FIELD_NAMES)
@@ -64,8 +66,7 @@ def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, c
             pkt_obj['timestamp'] = pkt_ts
             pkt_obj['source'] = set([])
             pkt_obj['website'] = set([])
-            if not (pkt_obj['src'] == '127.0.0.1' or pkt_obj['src'] == '127.0.1.1' or
-                    pkt_obj['dst'] == '127.0.0.1' or pkt_obj['dst'] == '127.0.1.1'):
+            if not (pkt_obj['src'] in ['127.0.0.1', '127.0.1.1'] or pkt_obj['dst'] in ['127.0.0.1', '127.0.1.1']):
                 pcap_list.append(pkt_obj)
                 if write_csv:
                     writer.writerow(pkt_obj)

@@ -45,7 +45,7 @@ def req_pkt_stats(json_data, pcap_data, time_from, time_to):
             try:
                 ips[ip].add(website)
             except KeyError:
-                ips[ip] = set([website])
+                ips[ip] = {website}
             for j, pkt in enumerate(pcap_data):
                 pkt_timestamp = pkt['timestamp']
                 if not req_timestamp <= pkt_timestamp < req_timestamp + tolerance:
@@ -72,7 +72,7 @@ def res_pkt_stats(json_data, pcap_data, time_from, time_to):
             try:
                 ips[ip].add(website)
             except KeyError:
-                ips[ip] = set([website])
+                ips[ip] = {website}
             for j, pkt in enumerate(pcap_data):
                 pkt_timestamp = pkt['timestamp']
                 if not res_timestamp - tolerance < pkt_timestamp <= res_timestamp:
@@ -109,7 +109,7 @@ def assign_by_time_tab(pcap_data, timing_data):
                 if time_from < pkt['timestamp'] < time_to:
                     if timing_data[j - 1]['website'] in pkt['website']:
                         pcap_data[i]['source'].add('TIME')
-                        pcap_data[i]['website'] = set([timing_data[j - 1]['website']])
+                        pcap_data[i]['website'] = {timing_data[j - 1]['website']}
                     else:
                         pcap_data[i]['source'].add('TIME')
                         pcap_data[i]['website'].add(timing_data[j - 1]['website'])

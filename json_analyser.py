@@ -9,14 +9,14 @@ from timestamp import TimeStamp
 
 def write_stats(stats):
     stats_file = open('stats.log', 'a')
-    stats_file.write('='*100 + '\n')
+    stats_file.write('=' * 100 + '\n')
     stats_file.write('json_analyser.py\n')
     stats_file.write(time.strftime("%c") + '\n')
-    stats_file.write('='*100 + '\n')
+    stats_file.write('=' * 100 + '\n')
     stats_file.write('Web app\t# of pairs\n')
     for key in stats['websites']:
         stats_file.write(key + '\t' + str(stats['websites'][key]) + '\n')
-    stats_file.write('='*100 + '\n')
+    stats_file.write('=' * 100 + '\n')
     stats_file.write('# of pairs (incl. empty): {0}\n'.format(stats['total']))
     stats_file.write('# of empty pairs: {0}\n'.format(stats['no_data']))
     stats_file.write('# of pairs with request only: {0}\n'.format(stats['request_only']))
@@ -76,13 +76,13 @@ def preprocess_time_tab_data(json_data):
     active_tab = json_data['activeTab']
     tab_changes = json_data['tabChanges']
     opened_website = []
-    for i in range(1, len(active_tab)+1):
-        time_stamp_from = active_tab[i-1]['timeStamp']
+    for i in range(1, len(active_tab) + 1):
+        time_stamp_from = active_tab[i - 1]['timeStamp']
         try:
             time_stamp_to = active_tab[i]['timeStamp']
         except IndexError:
             time_stamp_to = float('inf')
-        tab_id = str(active_tab[i-1]['id'])
+        tab_id = str(active_tab[i - 1]['id'])
         website = None
         if tab_id not in tab_changes:
             continue
@@ -126,12 +126,12 @@ def get_avg_delays(data):
     return delays
 
 
-def get_json_time_limits(data):
+def get_json_time_limits(json_data):
     """"Gets accurate time limits of JSON data"""
     first_request_time = float('inf')
     last_response_time = 0
-    for website in data:
-        for pair in data[website]:
+    for website in json_data:
+        for pair in json_data[website]:
             if pair['request']['timeStamp'] < first_request_time:
                 first_request_time = pair['request']['timeStamp']
             if pair['response']['timeStamp'] > last_response_time:
@@ -140,7 +140,6 @@ def get_json_time_limits(data):
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(description='JSON analyser.')
     parser.add_argument('json_name', nargs='?', type=str, help='input JSON file (\'data.json\' by default)',
                         default='data.json')

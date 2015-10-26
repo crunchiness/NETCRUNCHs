@@ -13,7 +13,7 @@ class TimeStamp:
         return int(self.value)
 
     def get_ms(self):
-        return int(self.value*1000)
+        return int(self.value * 1000)
 
     def __eq__(self, other):
         return self.get_ms() == other.get_ms()
