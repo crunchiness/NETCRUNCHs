@@ -57,3 +57,5 @@ target/
 
 *.pcap
 *.json
+*.csv
+venv/

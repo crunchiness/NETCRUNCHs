@@ -26,9 +26,9 @@ def write_stats(stats):
     stats_file.close()
 
 
-def preprocess_json(data):
+def preprocess_json(json_data):
     """Filter out cache responses, bad data, build statistics"""
-    pairs = data['pairs']
+    pairs = json_data['pairs']
     stats = {
         'websites': {},
         'from_cache': 0,
@@ -112,13 +112,13 @@ def preprocess_time_tab_data(json_data):
     return opened_website
 
 
-def get_avg_delays(data):
+def get_avg_delays(json_data):
     # calculates average delay between request and response
     delays = {}
-    for website in data:
+    for website in json_data:
         diff_sum = 0
         num_pairs = 0
-        for pair in data[website]:
+        for pair in json_data[website]:
             diff_sum += pair['response']['timeStamp'] - pair['request']['timeStamp']
             num_pairs += 1
         avg_delay = diff_sum / (1000.0 * num_pairs)

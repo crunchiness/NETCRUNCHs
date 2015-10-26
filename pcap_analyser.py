@@ -60,7 +60,7 @@ def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, c
     for pkt in packets:
         pkt_ts = pkt.timestamp + pkt.timestamp_ms / 1000000.
         if timestamp_abs_from.get_seconds() < pkt_ts < timestamp_abs_to.get_seconds():
-            eth_frame = Ethernet(pkt.raw())
+            eth_frame = Ethernet(pkt.raw(), sll=True)
             ip_packet = IP(binascii.unhexlify(eth_frame.payload))
             pkt_obj = parse(ip_packet)
             pkt_obj['timestamp'] = pkt_ts
