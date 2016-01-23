@@ -8,11 +8,7 @@ from pcapfile import savefile
 from json_analyser import get_json_time_limits, preprocess_json, preprocess_time_tab_data
 from pcap_analyser import get_pcap_time_limits, parse_pcap
 from timestamp import TimeStamp
-
-# field names of output file
-FIELD_NAMES = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'p', 'sum', 'src', 'dst', 'opt',
-               'pad', 'website', 'source']
-
+from pcap_analyser import FIELD_NAMES
 # IP dictionary
 ips = {}
 
