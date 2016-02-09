@@ -11,7 +11,7 @@ from timestamp import TimeStamp
 
 # field names of output file
 FIELD_NAMES = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'protocol', 'sum', 'src', 'dst', 'opt',
-               'pad', 'website', 'source', 'is_ack']
+               'pad', 'website', 'source', 'is_ack', 'url', 'src_port', 'dst_port']
 
 
 def parse(ip_packet):
@@ -211,8 +211,28 @@ def is_ack(pkt_obj, ip_packet):
         return False
 
 
+def get_ports(pkt_obj, ip_packet):
+    if pkt_obj['protocol'] == 'TCP':
+        tcp_packet = binascii.unhexlify(ip_packet.payload)
+        src_port = (ord(tcp_packet[0]) << 8) and ord(tcp_packet[1])
+        dst_port = (ord(tcp_packet[2]) << 8) and ord(tcp_packet[3])
+        return src_port, dst_port
+    else:
+        return -1, -1
+
+
 def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, csv_name='dump.csv'):
-    """Produces python list from pcap file"""
+    """
+    Produces Python list from PCAP file. In addition to parsed fields adds 'is_ack', 'timestamp', 'src_port',
+    'dst_port', 'source', and 'website' (last two are empty sets).
+    Filters out packets to/from 127.0.0.1 and 127.0.1.1
+    :param packets:
+    :param timestamp_abs_from:
+    :param timestamp_abs_to:
+    :param write_csv:
+    :param csv_name:
+    :return:
+    """
     pcap_list = []
     writer = None
     csv_file = None
@@ -228,6 +248,7 @@ def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, c
             pkt_obj = parse(ip_packet)
             pkt_obj['is_ack'] = is_ack(pkt_obj, ip_packet)
             pkt_obj['timestamp'] = pkt_ts
+            pkt_obj['src_port'], pkt_obj['dst_port'] = get_ports(pkt_obj, ip_packet)
             pkt_obj['source'] = set([])
             pkt_obj['website'] = set([])
             if not (pkt_obj['src'] in ['127.0.0.1', '127.0.1.1'] or pkt_obj['dst'] in ['127.0.0.1', '127.0.1.1']):

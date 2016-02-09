@@ -27,7 +27,6 @@ def get_abs_time_limits(ts1_from, ts1_to, ts2_from, ts2_to):
 
 
 def req_pkt_stats(json_data, pcap_data, time_from, time_to):
-    """Request-packet matching"""
     tolerance = 0.01  # in seconds
     statistics = {}
     for website in json_data:
@@ -49,6 +48,7 @@ def req_pkt_stats(json_data, pcap_data, time_from, time_to):
                 if pkt['dst'] == ip:
                     pcap_data[j]['source'].add('REQ')
                     pcap_data[j]['website'].add(website)
+                    pcap_data[j]['url'] = pair['request']['url']
                     statistics[website][i] += 1
     return pcap_data
 
@@ -80,6 +80,56 @@ def res_pkt_stats(json_data, pcap_data, time_from, time_to):
     return pcap_data
 
 
+def assign_by_flow(pcap_data):
+    """
+    Assigns website based on stream ID. Adds to the set, also adds 'FLOW' as source
+    :param pcap_data:
+    :return:
+    """
+    # collect possible websites for stream id
+    websites = {
+        # stream_id: {website: count}
+    }
+    for i, pkt in enumerate(pcap_data):
+        if pkt['protocol'] == 'TCP' and pkt['src_port'] != -1 and pkt['dst_port'] != -1:
+            stream_id = pkt['src'] + str(pkt['src_port']) + pkt['dst'] + str(pkt['dst_port'])
+
+            # get website in string form, skip if empty
+            try:
+                website = next(iter(pkt['website']))
+            except StopIteration:
+                continue
+
+            # increment website count in this stream_id
+            try:
+                websites[stream_id][website] += 1
+            except KeyError:
+                websites[stream_id] = {website: 1}
+
+    # select the most likely website for steam id
+    for stream_id in websites.keys():
+        max_value = 0
+        top_website = ''
+        for key, value in websites[stream_id].iteritems():
+            if value > max_value:
+                max_value = value
+                top_website = key
+        websites[stream_id] = top_website
+
+    # add website by stream id to pcap_data
+    for i, pkt in enumerate(pcap_data):
+        if pkt['protocol'] == 'TCP' and pkt['src_port'] != -1 and pkt['dst_port'] != -1:
+            stream_id = pkt['src'] + str(pkt['src_port']) + pkt['dst'] + str(pkt['dst_port'])
+            try:
+                flow_site = websites[stream_id]
+                pcap_data[i]['source'].add('FLOW')
+                pcap_data[i]['website'].add(flow_site)
+            except KeyError:
+                continue
+
+    return pcap_data
+
+
 def assign_by_ip(pcap_data):
     for i, pkt in enumerate(pcap_data):
         if len(pkt['website']) > 0:
@@ -95,7 +145,7 @@ def assign_by_ip(pcap_data):
 
 def assign_by_time_tab(pcap_data, timing_data):
     for i, pkt in enumerate(pcap_data):
-        if not (('RES' in pcap_data[i]['source']) or ('REQ' in pcap_data[i]['source'])):
+        if not (('RES' in pcap_data[i]['source']) or ('REQ' in pcap_data[i]['source']) or ('FLOW' in pcap_data[i]['source'])):
             for j in range(1, len(timing_data) + 1):
                 time_from = timing_data[j - 1]['timeStamp'] / 1000.
                 try:
@@ -146,6 +196,8 @@ def main(json_name, pcap_name, preprocessed, output_file):
     parsed_pcap = req_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
     # packet matching using response data
     parsed_pcap = res_pkt_stats(pair_data, parsed_pcap, timestamp_abs_from, timestamp_abs_to)
+    # packet matching by tcp flow
+    parsed_pcap = assign_by_flow(parsed_pcap)
     # packet matching by ip
     parsed_pcap = assign_by_ip(parsed_pcap)
     # packet matching by active tab time data
