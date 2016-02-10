@@ -10,8 +10,8 @@ from pcapfile.protocols.linklayer.ethernet import Ethernet
 from timestamp import TimeStamp
 
 # field names of output file
-FIELD_NAMES = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'protocol', 'sum', 'src', 'dst', 'opt',
-               'pad', 'website', 'source', 'is_ack', 'url', 'src_port', 'dst_port']
+FIELD_NAMES = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'protocol', 'sum', 'src', 'dst',
+               'opt', 'pad', 'website', 'source', 'is_ack', 'url', 'src_port', 'dst_port']
 
 
 def parse(ip_packet):
