@@ -11,7 +11,7 @@ from timestamp import TimeStamp
 
 # field names of output file
 FIELD_NAMES = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'protocol', 'sum', 'src', 'dst',
-               'opt', 'pad', 'website', 'source', 'is_ack', 'url', 'src_port', 'dst_port']
+               'opt', 'pad', 'website', 'source', 'is_ack', 'is_rst', 'is_fin', 'url', 'src_port', 'dst_port']
 
 
 def parse(ip_packet):
@@ -193,6 +193,11 @@ def get_pcap_time_limits(packets):
     return timestamp_pcap_from, timestamp_pcap_to
 
 
+def get_tcp_flags(ip_packet):
+    tcp_packet = binascii.unhexlify(ip_packet.payload)
+    return ord(tcp_packet[13])
+
+
 def is_ack(pkt_obj, ip_packet):
     if pkt_obj['protocol'] == 'TCP':
         tcp_packet = binascii.unhexlify(ip_packet.payload)
@@ -201,12 +206,32 @@ def is_ack(pkt_obj, ip_packet):
         tcp_header_bytes = int(bin(ord(tcp_packet[12]))[2:].zfill(8)[:4], 2) * 4
 
         # check if ack flag is set
-        flags = ord(tcp_packet[13])
+        flags = get_tcp_flags(ip_packet)
         ack_mask = int('00010000', 2)
-        ack_set = (ack_mask and flags) == ack_mask
+        ack_set = (ack_mask & flags) == ack_mask
 
         # if ack mask set and there is no payload, it's an ACK
         return ack_set and len(tcp_packet) == tcp_header_bytes
+    else:
+        return False
+
+
+def is_fin(pkt_obj, ip_packet):
+    if pkt_obj['protocol'] == 'TCP':
+        flags = get_tcp_flags(ip_packet)
+        fin_mask = int('00000001', 2)
+        fin_set = (fin_mask & flags) == fin_mask
+        return fin_set
+    else:
+        return False
+
+
+def is_rst(pkt_obj, ip_packet):
+    if pkt_obj['protocol'] == 'TCP':
+        flags = get_tcp_flags(ip_packet)
+        rst_mask = int('00000100', 2)
+        rst_set = (rst_mask & flags) == rst_mask
+        return rst_set
     else:
         return False
 
@@ -223,8 +248,8 @@ def get_ports(pkt_obj, ip_packet):
 
 def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, csv_name='dump.csv'):
     """
-    Produces Python list from PCAP file. In addition to parsed fields adds 'is_ack', 'timestamp', 'src_port',
-    'dst_port', 'source', and 'website' (last two are empty sets).
+    Produces Python list from PCAP file. In addition to parsed fields adds 'is_ack', 'is_rst', 'is_fin', 'timestamp',
+    'src_port', 'dst_port', 'source', and 'website' (last two are empty sets).
     Filters out packets to/from 127.0.0.1 and 127.0.1.1
     :param packets:
     :param timestamp_abs_from:
@@ -247,6 +272,8 @@ def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, c
             ip_packet = IP(binascii.unhexlify(eth_frame.payload))
             pkt_obj = parse(ip_packet)
             pkt_obj['is_ack'] = is_ack(pkt_obj, ip_packet)
+            pkt_obj['is_rst'] = is_rst(pkt_obj, ip_packet)
+            pkt_obj['is_fin'] = is_fin(pkt_obj, ip_packet)
             pkt_obj['timestamp'] = pkt_ts
             pkt_obj['src_port'], pkt_obj['dst_port'] = get_ports(pkt_obj, ip_packet)
             pkt_obj['source'] = set([])
