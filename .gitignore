@@ -59,3 +59,4 @@ target/
 *.json
 *.csv
 venv/
+*.sh
