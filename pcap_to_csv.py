@@ -1,3 +1,4 @@
+import argparse
 import csv
 import binascii
 from pcapfile import savefile
@@ -34,7 +35,15 @@ def parse_pcap(packets, csv_name='android_el_manana.csv'):
             writer.writerow(pkt_obj)
     csv_file.close()
 
-file_name = 'android_el_manana.pcap'
-pcap_file = open(file_name)
-pcap_data = savefile.load_savefile(pcap_file, verbose=True)
-parse_pcap(pcap_data.packets)
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Converts PCAP to CSV.')
+    parser.add_argument('pcap_name', nargs='?', type=str, help='input PCAP file (default \'dump.pcap\')',
+                        default='dump.pcap')
+    parser.add_argument('output', nargs='?', type=str, help='output file (default \'out.csv\')', default='out.csv')
+
+    args = parser.parse_args()
+
+    pcap_file = open(args.pcap_name)
+    pcap_data = savefile.load_savefile(pcap_file, verbose=True)
+    parse_pcap(pcap_data.packets, csv_name=args.output)
