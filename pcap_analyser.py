@@ -259,6 +259,7 @@ def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, website=
     :param csv_name:
     :return:
     """
+    non_ip4_count = 0
     timestamp_abs_from = 0 if timestamp_abs_from is None else timestamp_abs_from.get_seconds()
     timestamp_abs_to = float('inf') if timestamp_abs_to is None else timestamp_abs_to.get_seconds()
     pcap_list = []
@@ -271,8 +272,12 @@ def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, website=
     for pkt in packets:
         pkt_ts = pkt.timestamp + pkt.timestamp_ms / 1000000.
         if timestamp_abs_from < pkt_ts < timestamp_abs_to:
-            eth_frame = Ethernet(pkt.raw(), sll=True)
-            ip_packet = IP(binascii.unhexlify(eth_frame.payload))
+            eth_frame = Ethernet(pkt.raw(), sll=source != 'DIRECT')
+            try:
+                ip_packet = IP(binascii.unhexlify(eth_frame.payload))
+            except AssertionError:
+                non_ip4_count += 1
+                continue
             pkt_obj = parse(ip_packet)
             pkt_obj['is_ack'] = is_ack(pkt_obj, ip_packet)
             pkt_obj['is_rst'] = is_rst(pkt_obj, ip_packet)
@@ -287,6 +292,8 @@ def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, website=
                     writer.writerow(pkt_obj)
     if write_csv:
         csv_file.close()
+    if non_ip4_count > 0:
+        print 'Failed to parse {0} packets. Non IPv4?'.format(non_ip4_count)
     return pcap_list
 
 
