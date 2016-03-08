@@ -246,7 +246,8 @@ def get_ports(pkt_obj, ip_packet):
         return -1, -1
 
 
-def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, write_csv=False, csv_name='dump.csv'):
+def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, website=None, source=None, write_csv=False,
+               csv_name='dump.csv'):
     """
     Produces Python list from PCAP file. In addition to parsed fields adds 'is_ack', 'is_rst', 'is_fin', 'timestamp',
     'src_port', 'dst_port', 'source', and 'website' (last two are empty sets).
@@ -278,8 +279,8 @@ def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, write_cs
             pkt_obj['is_fin'] = is_fin(pkt_obj, ip_packet)
             pkt_obj['timestamp'] = pkt_ts
             pkt_obj['src_port'], pkt_obj['dst_port'] = get_ports(pkt_obj, ip_packet)
-            pkt_obj['source'] = set([])
-            pkt_obj['website'] = set([])
+            pkt_obj['source'] = set([]) if source is None else source
+            pkt_obj['website'] = set([]) if website is None else website
             if not (pkt_obj['src'] in ['127.0.0.1', '127.0.1.1'] or pkt_obj['dst'] in ['127.0.0.1', '127.0.1.1']):
                 pcap_list.append(pkt_obj)
                 if write_csv:
