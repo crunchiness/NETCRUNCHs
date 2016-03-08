@@ -246,7 +246,7 @@ def get_ports(pkt_obj, ip_packet):
         return -1, -1
 
 
-def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, csv_name='dump.csv'):
+def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, write_csv=False, csv_name='dump.csv'):
     """
     Produces Python list from PCAP file. In addition to parsed fields adds 'is_ack', 'is_rst', 'is_fin', 'timestamp',
     'src_port', 'dst_port', 'source', and 'website' (last two are empty sets).
@@ -258,6 +258,8 @@ def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, c
     :param csv_name:
     :return:
     """
+    timestamp_abs_from = 0 if timestamp_abs_from is None else timestamp_abs_from.get_seconds()
+    timestamp_abs_to = float('inf') if timestamp_abs_to is None else timestamp_abs_to.get_seconds()
     pcap_list = []
     writer = None
     csv_file = None
@@ -267,7 +269,7 @@ def parse_pcap(packets, timestamp_abs_from, timestamp_abs_to, write_csv=False, c
         writer.writeheader()
     for pkt in packets:
         pkt_ts = pkt.timestamp + pkt.timestamp_ms / 1000000.
-        if timestamp_abs_from.get_seconds() < pkt_ts < timestamp_abs_to.get_seconds():
+        if timestamp_abs_from < pkt_ts < timestamp_abs_to:
             eth_frame = Ethernet(pkt.raw(), sll=True)
             ip_packet = IP(binascii.unhexlify(eth_frame.payload))
             pkt_obj = parse(ip_packet)
