@@ -48,7 +48,7 @@ def req_pkt_stats(json_data, pcap_data, time_from, time_to):
                 if pkt['dst'] == ip:
                     pcap_data[j]['source'].add('REQ')
                     pcap_data[j]['website'].add(website)
-                    pcap_data[j]['url'] = pair['request']['url']
+                    pcap_data[j]['url'] = pair['request']['url'] if 'url' in pair['request'] else ''
                     statistics[website][i] += 1
     return pcap_data
 

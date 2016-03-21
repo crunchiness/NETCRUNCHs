@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import struct
+
 __author__ = 'Ingvaras Merkys'
 
 import binascii
@@ -11,7 +13,7 @@ from timestamp import TimeStamp
 
 # field names of output file
 FIELD_NAMES = ['timestamp', 'v', 'hl', 'tos', 'len', 'id', 'flags', 'off', 'ttl', 'protocol', 'sum', 'src', 'dst',
-               'opt', 'pad', 'website', 'source', 'is_ack', 'is_rst', 'is_fin', 'url', 'src_port', 'dst_port']
+               'opt', 'pad', 'website', 'source', 'is_ack', 'is_rst', 'is_fin', 'q_cid', 'url', 'src_port', 'dst_port']
 
 
 def parse(ip_packet):
@@ -216,6 +218,26 @@ def is_ack(pkt_obj, ip_packet):
         return False
 
 
+def get_quic_cid(pkt_obj, ip_packet):
+    if pkt_obj['protocol'] == 'UDP':
+        udp_packet = binascii.unhexlify(ip_packet.payload)
+        flags = ord(udp_packet[8])
+        if (flags & int('0x0C', 16)) == int('0x0C', 16):  # 8-byte Connection ID is present
+            cid_length = 8
+        elif (flags & int('0x08', 16)) == int('0x08', 16):  # 4-byte Connection ID
+            cid_length = 4
+        elif (flags & int('0x04', 16)) == int('0x04', 16):  # 1-byte
+            cid_length = 1
+        elif (flags & int('0x00', 16)) == int('0x00', 16):  # omitted
+            return '0'
+        else:
+            raise Exception('ur an idiot')
+        s = struct.Struct('<' + {1: 'B', 4: 'L', 8: 'Q'}[cid_length])
+        return str(s.unpack(udp_packet[9:9 + cid_length])[0])
+    else:
+        return ''
+
+
 def is_fin(pkt_obj, ip_packet):
     if pkt_obj['protocol'] == 'TCP':
         flags = get_tcp_flags(ip_packet)
@@ -241,6 +263,11 @@ def get_ports(pkt_obj, ip_packet):
         tcp_packet = binascii.unhexlify(ip_packet.payload)
         src_port = (ord(tcp_packet[0]) << 8) and ord(tcp_packet[1])
         dst_port = (ord(tcp_packet[2]) << 8) and ord(tcp_packet[3])
+        return src_port, dst_port
+    elif pkt_obj['protocol'] == 'UDP':
+        udp_packet = binascii.unhexlify(ip_packet.payload)
+        src_port = int(''.join(map(lambda byte: hex(ord(byte))[2:].zfill(2), udp_packet[0:2])), 16)
+        dst_port = int(''.join(map(lambda byte: hex(ord(byte))[2:].zfill(2), udp_packet[2:4])), 16)
         return src_port, dst_port
     else:
         return -1, -1
@@ -282,6 +309,7 @@ def parse_pcap(packets, timestamp_abs_from=None, timestamp_abs_to=None, website=
             pkt_obj['is_ack'] = is_ack(pkt_obj, ip_packet)
             pkt_obj['is_rst'] = is_rst(pkt_obj, ip_packet)
             pkt_obj['is_fin'] = is_fin(pkt_obj, ip_packet)
+            pkt_obj['q_cid'] = get_quic_cid(pkt_obj, ip_packet)
             pkt_obj['timestamp'] = pkt_ts
             pkt_obj['src_port'], pkt_obj['dst_port'] = get_ports(pkt_obj, ip_packet)
             pkt_obj['source'] = set([]) if source is None else source
