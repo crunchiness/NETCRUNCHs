@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 import argparse
 from pcapfile import savefile
 from pcap_analyser import parse_pcap
