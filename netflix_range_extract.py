@@ -7,12 +7,19 @@ from pcapfile.protocols.linklayer.ethernet import Ethernet
 from pcapfile.protocols.network.ip import IP
 
 
-def extract_range(tcp_packet):
-    pattern = re.compile('Range: bytes=([0-9]+)-([0-9]+)')
+def extract_range(tcp_packet, is_method_req=True):
+    if is_method_req:
+        pattern = re.compile('Range: bytes=([0-9]+)-([0-9]+)')
+    else:
+        pattern = re.compile('Content-Range: bytes ([0-9]+)-([0-9]+)')
     for line in tcp_packet.split('\r\n'):
         match = re.match(pattern, line)
         if match is not None:
-            return int(match.group(1)), int(match.group(2))
+            from_byte, to_byte = int(match.group(1)), int(match.group(2))
+            if 0 < to_byte - from_byte < 1 * 1024 * 1024:
+                return from_byte, to_byte
+            else:
+                return None
     return None
 
 
@@ -33,6 +40,7 @@ if __name__ == '__main__':
             continue
         tcp_packet = binascii.unhexlify(ip_packet.payload)
 
+        # if 'Content-Range' in tcp_packet:
         if 'GET' in tcp_packet and 'Range' in tcp_packet:
             res = extract_range(tcp_packet)
             if res is not None:
